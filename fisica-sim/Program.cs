@@ -1,62 +1,165 @@
 ﻿using Raylib_cs;
 using System.Numerics;
+using System;
 
 class Program
 {
     static void Main()
     {
         // Configuración ventana
-        Raylib.InitWindow(800, 600, "Física - Caída libre");
+        Raylib.InitWindow(800, 600, "Física - Lanzar con ratón");
         Raylib.SetTargetFPS(60);
 
         // Estado de la pelota
-        Vector2 posicion = new Vector2(400, 50);
-        Vector2 velocidad = new Vector2(500, 250);
-        float gravedad = 500.0f; // píxeles/s²
+        Vector2 posicion = new Vector2(400, 300);
+        Vector2 velocidad = new Vector2(0, 0);
+        float gravedad = 500.0f;
         float radio = 20.0f;
-        float restitucion = 0.9999f;
+        float restitucion = 0.8f;
         float rozAire = 0.999f;
+
+        // Estado del arrastre
+        bool arrastrando = false;
+        Vector2 posicionInicial = Vector2.Zero;
 
         while (!Raylib.WindowShouldClose())
         {
             float dt = Raylib.GetFrameTime();
+            Vector2 mousePosicion = Raylib.GetMousePosition();
 
-            // Física
-            velocidad.Y += gravedad * dt;
-            velocidad *= MathF.Pow(rozAire, dt);
-            posicion += velocidad * dt;
-
-            // Rebote en paredes laterales
-            if (posicion.X + radio > 800)
+            // Detectar click en la pelota
+            if (Raylib.IsMouseButtonPressed(MouseButton.Left))
             {
-                posicion.X = 800 - radio;
-                velocidad.X = -velocidad.X * restitucion; // coeficiente de restitución
+                float distancia = Vector2.Distance(mousePosicion, posicion);
+                if (distancia <= radio)
+                {
+                    arrastrando = true;
+                    posicionInicial = posicion;
+                    velocidad = Vector2.Zero;
+                }
             }
 
-            if (posicion.X - radio < 0)
+            // Arrastrar
+            if (arrastrando)
             {
-                posicion.X = radio;
-                velocidad.X = -velocidad.X * restitucion;
+                if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+                {
+                    arrastrando = false;
+                    Vector2 delta = mousePosicion - posicionInicial;
+                    velocidad = delta * 5.0f;
+                }
             }
-
-            // Rebote en el suelo
-            if (posicion.Y + radio > 600)
+            else
             {
-                posicion.Y = 600 - radio;
-                velocidad.Y = -velocidad.Y * restitucion; // coeficiente de restitución
-            }
+                // Física normal
+                velocidad.Y += gravedad * dt;
+                velocidad *= MathF.Pow(rozAire, dt);
+                posicion += velocidad * dt;
 
-            if (posicion.Y - radio < 0)
-            {
-                posicion.Y = radio;
-                velocidad.Y = -velocidad.Y * restitucion;
+                // Rebotes
+                if (posicion.X + radio > 800)
+                {
+                    posicion.X = 800 - radio;
+                    velocidad.X = -velocidad.X * restitucion;
+                }
+                if (posicion.X - radio < 0)
+                {
+                    posicion.X = radio;
+                    velocidad.X = -velocidad.X * restitucion;
+                }
+                if (posicion.Y + radio > 600)
+                {
+                    posicion.Y = 600 - radio;
+                    velocidad.Y = -velocidad.Y * restitucion;
+                }
+                if (posicion.Y - radio < 0)
+                {
+                    posicion.Y = radio;
+                    velocidad.Y = -velocidad.Y * restitucion;
+                }
             }
 
             // Dibujar
             Raylib.BeginDrawing();
             Raylib.ClearBackground(Color.Black);
+
+            if (arrastrando)
+            {
+                // Vector desde inicio hasta ratón
+                Vector2 deltaRaton = mousePosicion - posicionInicial;
+
+                // Línea amarilla: desde inicio hasta ratón
+                Raylib.DrawLineEx(posicionInicial, mousePosicion, 2.0f, Color.Yellow);
+
+                // Calcular ángulo entre 0° y 90° (valor absoluto)
+                float anguloAbsoluto = MathF.Atan2(MathF.Abs(deltaRaton.Y), MathF.Abs(deltaRaton.X));
+                float anguloGrados = anguloAbsoluto * (180.0f / MathF.PI);
+
+                // Dibujar línea horizontal
+                Vector2 horizontal = posicionInicial + new Vector2(deltaRaton.X, 0);
+                Raylib.DrawLineEx(posicionInicial, horizontal, 2.0f, Color.White);
+
+                // Dibujar sector circular
+                float radioArco = 80.0f;
+                int numLineas = 30;
+
+                // Ángulo base de la horizontal según el cuadrante
+                float anguloHorizontal;
+                if (deltaRaton.X >= 0)
+                    anguloHorizontal = 0; // Horizontal derecha
+                else
+                    anguloHorizontal = MathF.PI; // Horizontal izquierda
+
+                // Ángulo de la línea amarilla
+                float anguloLinea;
+                if (deltaRaton.X >= 0 && deltaRaton.Y < 0)
+                    anguloLinea = -anguloAbsoluto; // Cuadrante I (arriba-derecha)
+                else if (deltaRaton.X < 0 && deltaRaton.Y < 0)
+                    anguloLinea = MathF.PI + anguloAbsoluto; // Cuadrante II (arriba-izquierda)
+                else if (deltaRaton.X < 0 && deltaRaton.Y >= 0)
+                    anguloLinea = MathF.PI - anguloAbsoluto; // Cuadrante III (abajo-izquierda)
+                else // deltaRaton.X >= 0 && deltaRaton.Y >= 0
+                    anguloLinea = anguloAbsoluto; // Cuadrante IV (abajo-derecha)
+
+                // Dibujar el arco desde horizontal hasta línea
+                Vector2 puntoAnterior = posicionInicial + new Vector2(
+                    MathF.Cos(anguloHorizontal) * radioArco,
+                    MathF.Sin(anguloHorizontal) * radioArco
+                );
+
+                for (int i = 1; i <= numLineas; i++)
+                {
+                    float t = (float)i / numLineas;
+                    float anguloActual = anguloHorizontal + t * (anguloLinea - anguloHorizontal);
+
+                    Vector2 puntoActual = posicionInicial + new Vector2(
+                        MathF.Cos(anguloActual) * radioArco,
+                        MathF.Sin(anguloActual) * radioArco
+                    );
+
+                    Raylib.DrawLineV(puntoAnterior, puntoActual, Color.DarkGray);
+                    puntoAnterior = puntoActual;
+                }
+
+                // Mostrar información
+                string textoAngulo = $"Ángulo: {anguloGrados:F1}°";
+                Raylib.DrawText(textoAngulo, 10, 40, 20, Color.DarkGray);
+
+                Raylib.DrawCircleV(posicionInicial, 5.0f, Color.Green);
+                Raylib.DrawCircleV(mousePosicion, 5.0f, Color.Red);
+            }
+
             Raylib.DrawCircleV(posicion, radio, Color.Red);
-            Raylib.DrawText("Presiona ESC para salir", 10, 10, 20, Color.White);
+
+            // Vector velocidad
+            if (velocidad.Length() > 1.0f)
+            {
+                Vector2 puntoFinal = posicion + velocidad * 0.1f;
+                Raylib.DrawLineEx(posicion, puntoFinal, 3.0f, Color.Blue);
+                Raylib.DrawCircleV(puntoFinal, 4.0f, Color.Blue);
+            }
+
+            Raylib.DrawText("Click y arrastra la pelota", 10, 10, 20, Color.White);
             Raylib.EndDrawing();
         }
 

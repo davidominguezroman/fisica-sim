@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("fisica-sim")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+01e98f7f25f2dd7e6213b2009e3cbf6a379cd8c3")]
 [assembly: System.Reflection.AssemblyProductAttribute("fisica-sim")]
 [assembly: System.Reflection.AssemblyTitleAttribute("fisica-sim")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
