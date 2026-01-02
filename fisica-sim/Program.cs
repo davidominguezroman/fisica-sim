@@ -1,168 +1,104 @@
 ﻿using Raylib_cs;
 using System.Numerics;
-using System;
 
-class Program
-{
-    static void Main()
+
+namespace fisica_sim;
+
+    static class Program
     {
-        // Configuración ventana
-        Raylib.InitWindow(800, 600, "Física - Lanzar con ratón");
-        Raylib.SetTargetFPS(60);
+        private const float Gravedad = 500.0f;
+        private const float RozAire = 0.999f;
+        private const float Restitucion = 0.8f;
+        private const int Width = 1024;
+        private const int Height = 720;
 
-        // Estado de la pelota
-        Vector2 posicion = new Vector2(400, 300);
-        Vector2 velocidad = new Vector2(0, 0);
-        float gravedad = 500.0f;
-        float radio = 20.0f;
-        float restitucion = 0.8f;
-        float rozAire = 0.999f;
-
-        // Estado del arrastre
-        bool arrastrando = false;
-        Vector2 posicionInicial = Vector2.Zero;
-
-        while (!Raylib.WindowShouldClose())
+        static void Main()
         {
-            float dt = Raylib.GetFrameTime();
-            Vector2 mousePosicion = Raylib.GetMousePosition();
+            // Configuración ventana
+            Raylib.InitWindow(Width, Height, "Física - Lanzar con ratón");
+            Raylib.SetTargetFPS(60);
+            //Para los errores de novato he hecho uso de Gemini 3 Pro. CClaude no me dejaba seguir
+            // Las pelotas tienen que declararse fuera del bucle principal. Error de novato...
+            List<Pelota> pelotas = new List<Pelota>();
+            // Código generado por Gemini 3 Pro empieza aquí
+            Random rnd = new Random();
+            int numPelotas = 5;
 
-            // Detectar click en la pelota
-            if (Raylib.IsMouseButtonPressed(MouseButton.Left))
+            // Generar 10 pelotas (o las que quieras)
+            for (int i = 0; i < numPelotas; i++)
             {
-                float distancia = Vector2.Distance(mousePosicion, posicion);
-                if (distancia <= radio)
-                {
-                    arrastrando = true;
-                    posicionInicial = posicion;
-                    velocidad = Vector2.Zero;
-                }
+                float rX = rnd.Next(50, Width - 50); // Posición X aleatoria
+                float rY = rnd.Next(50, Height - 200); // Posición Y aleatoria
+                float radio = rnd.Next(10, 50); // Radio aleatorio entre 15 y 35
+                float vx = rnd.Next(100 - Width, Width - 100); // velocidad x aleatoria entre 50 - Width y Width -50
+                float vy = rnd.Next(100 - Height, Height - 100); // velocidad y aleatoria entre 50 - Height y Height -50
+
+                // Generamos un color aleatorio
+                Color colorAleatorio = new Color(rnd.Next(256), rnd.Next(256), rnd.Next(256), 255);
+
+                pelotas.Add(new Pelota(rX, rY, vx, vy, radio, colorAleatorio));
             }
 
-            // Arrastrar
-            if (arrastrando)
+            // El código generado acaba aquí. He añadido vx y vy para añadirles una velocidad aleatoria en función de
+            // las dimensiones de la pantalla.
+            while (!Raylib.WindowShouldClose())
             {
-                if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+                float dt = Raylib.GetFrameTime();
+                Vector2 mousePosicion = Raylib.GetMousePosition();
+
+                // Colisiones entre pelotas (Bucle anidado)
+                // Usamos for en lugar de foreach para tener control sobre los índices y no repetir parejas
+                // Colisiones entre pelotas (Bucle anidado)
+                for (int i = 0; i < pelotas.Count; i++)
                 {
-                    arrastrando = false;
-                    Vector2 delta = mousePosicion - posicionInicial;
-                    velocidad = delta * 5.0f;
-                }
-            }
-            else
-            {
-                // Física normal
-                velocidad.Y += gravedad * dt;
-                velocidad *= MathF.Pow(rozAire, dt);
-                posicion += velocidad * dt;
-
-                // Rebotes
-                if (posicion.X + radio > 800)
-                {
-                    posicion.X = 800 - radio;
-                    velocidad.X = -velocidad.X * restitucion;
-                }
-                if (posicion.X - radio < 0)
-                {
-                    posicion.X = radio;
-                    velocidad.X = -velocidad.X * restitucion;
-                }
-                if (posicion.Y + radio > 600)
-                {
-                    posicion.Y = 600 - radio;
-                    velocidad.Y = -velocidad.Y * restitucion;
-                }
-                if (posicion.Y - radio < 0)
-                {
-                    posicion.Y = radio;
-                    velocidad.Y = -velocidad.Y * restitucion;
-                }
-            }
-
-            // Dibujar
-            Raylib.BeginDrawing();
-            Raylib.ClearBackground(Color.Black);
-
-            if (arrastrando)
-            {
-                // Vector desde inicio hasta ratón
-                Vector2 deltaRaton = mousePosicion - posicionInicial;
-
-                // Línea amarilla: desde inicio hasta ratón
-                Raylib.DrawLineEx(posicionInicial, mousePosicion, 2.0f, Color.Yellow);
-
-                // Calcular ángulo entre 0° y 90° (valor absoluto)
-                float anguloAbsoluto = MathF.Atan2(MathF.Abs(deltaRaton.Y), MathF.Abs(deltaRaton.X));
-                float anguloGrados = anguloAbsoluto * (180.0f / MathF.PI);
-
-                // Dibujar línea horizontal
-                Vector2 horizontal = posicionInicial + new Vector2(deltaRaton.X, 0);
-                Raylib.DrawLineEx(posicionInicial, horizontal, 2.0f, Color.White);
-
-                // Dibujar sector circular
-                float radioArco = 80.0f;
-                int numLineas = 30;
-
-                // Ángulo base de la horizontal según el cuadrante
-                float anguloHorizontal;
-                if (deltaRaton.X >= 0)
-                    anguloHorizontal = 0; // Horizontal derecha
-                else
-                    anguloHorizontal = MathF.PI; // Horizontal izquierda
-
-                // Ángulo de la línea amarilla
-                float anguloLinea;
-                if (deltaRaton.X >= 0 && deltaRaton.Y < 0)
-                    anguloLinea = -anguloAbsoluto; // Cuadrante I (arriba-derecha)
-                else if (deltaRaton.X < 0 && deltaRaton.Y < 0)
-                    anguloLinea = MathF.PI + anguloAbsoluto; // Cuadrante II (arriba-izquierda)
-                else if (deltaRaton.X < 0 && deltaRaton.Y >= 0)
-                    anguloLinea = MathF.PI - anguloAbsoluto; // Cuadrante III (abajo-izquierda)
-                else // deltaRaton.X >= 0 && deltaRaton.Y >= 0
-                    anguloLinea = anguloAbsoluto; // Cuadrante IV (abajo-derecha)
-
-                // Dibujar el arco desde horizontal hasta línea
-                Vector2 puntoAnterior = posicionInicial + new Vector2(
-                    MathF.Cos(anguloHorizontal) * radioArco,
-                    MathF.Sin(anguloHorizontal) * radioArco
-                );
-
-                for (int i = 1; i <= numLineas; i++)
-                {
-                    float t = (float)i / numLineas;
-                    float anguloActual = anguloHorizontal + t * (anguloLinea - anguloHorizontal);
-
-                    Vector2 puntoActual = posicionInicial + new Vector2(
-                        MathF.Cos(anguloActual) * radioArco,
-                        MathF.Sin(anguloActual) * radioArco
-                    );
-
-                    Raylib.DrawLineV(puntoAnterior, puntoActual, Color.DarkGray);
-                    puntoAnterior = puntoActual;
+                    for (int j = i + 1; j < pelotas.Count; j++)
+                    {
+                        // Solo detectar colisiones si NINGUNA está siendo arrastrada
+                        if (!pelotas[i].Arrastrando && !pelotas[j].Arrastrando)
+                        {
+                            pelotas[i].DetectarColisiones(pelotas[j], Restitucion);
+                        }
+                    }
                 }
 
-                // Mostrar información
-                string textoAngulo = $"Ángulo: {anguloGrados:F1}°";
-                Raylib.DrawText(textoAngulo, 10, 40, 20, Color.DarkGray);
+                foreach (Pelota pelota in pelotas)
+                {
+                    // 1. LÓGICA / INPUT
+                    if (pelota.DetectarClick(mousePosicion)) pelota.IniciarArrastre();
 
-                Raylib.DrawCircleV(posicionInicial, 5.0f, Color.Green);
-                Raylib.DrawCircleV(mousePosicion, 5.0f, Color.Red);
+                    if (pelota.Arrastrando)
+                    {
+                        if (Raylib.IsMouseButtonReleased(MouseButton.Left))
+                        {
+                            pelota.SoltarArrastre(mousePosicion);
+                        }
+                        // AQUÍ BORRAMOS el "else { pelota1.Arrastrar... }"
+                        // porque Arrastrar contiene código de dibujo y este es el bloque de lógica.
+                    }
+                    else
+                    {
+                        pelota.DetectarParedes(Width, Height, Restitucion);
+
+                        pelota.ActualizarFisica(dt, Gravedad, RozAire);
+                    }
+                }
+
+                // 2. DIBUJO
+                Raylib.BeginDrawing();
+                Raylib.ClearBackground(Color.Black);
+
+                // Al llamar a Dibujar aquí, dentro ya se llama a "Arrastrar" si es necesario,
+                // y como estamos dentro de BeginDrawing, las líneas se verán perfectas. Otro error de novato...
+                foreach (Pelota pelota in pelotas)
+                {
+                    pelota.Dibujar(mousePosicion);
+                }
+
+                Raylib.DrawText("Click y arrastra la pelota", 10, 10, 20, Color.White);
+                Raylib.EndDrawing();
+
             }
 
-            Raylib.DrawCircleV(posicion, radio, Color.Red);
-
-            // Vector velocidad
-            if (velocidad.Length() > 1.0f)
-            {
-                Vector2 puntoFinal = posicion + velocidad * 0.1f;
-                Raylib.DrawLineEx(posicion, puntoFinal, 3.0f, Color.Blue);
-                Raylib.DrawCircleV(puntoFinal, 4.0f, Color.Blue);
-            }
-
-            Raylib.DrawText("Click y arrastra la pelota", 10, 10, 20, Color.White);
-            Raylib.EndDrawing();
+            Raylib.CloseWindow();
         }
-
-        Raylib.CloseWindow();
     }
-}
